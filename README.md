@@ -1,24 +1,24 @@
-# 🤖 Legal Chatbot — AI-Powered Chat Application
+# 🤖 Legal Chatbot — RAG-Powered Chat Application
 
-A production-ready fullstack AI chatbot built with **FastAPI**, **React**, **PostgreSQL**, and **OpenAI**.
+A production-ready fullstack legal chatbot built with **FastAPI**, **React**, **PostgreSQL**, and a **RAG (Retrieval-Augmented Generation)** pipeline.
 
 ---
 
 ## 📐 System Architecture
 
 ```
-┌─────────────┐     HTTP/REST      ┌──────────────────┐     API Call     ┌──────────────┐
-│   Frontend   │ ◄───────────────► │  Backend (API)   │ ◄─────────────► │  OpenAI API  │
-│  React/Vite  │                   │    FastAPI        │                 │  GPT-3.5/4   │
-│  TailwindCSS │                   │    Python         │                 └──────────────┘
+┌─────────────┐     HTTP/REST      ┌──────────────────┐
+│   Frontend   │ ◄───────────────► │  Backend (API)   │
+│  React/Vite  │                   │    FastAPI        │
+│  TailwindCSS │                   │    Python         │
 └─────────────┘                    └────────┬─────────┘
                                             │
-                                   ┌────────┴─────────┐
-                                   │                   │
-                              ┌────▼─────┐      ┌─────▼────┐
-                              │PostgreSQL│      │  Redis   │
-                              │   (DB)   │      │ (Cache)  │
-                              └──────────┘      └──────────┘
+                         ┌──────────────────┼──────────────────┐
+                         │                  │                  │
+                    ┌────▼─────┐      ┌────▼─────┐      ┌─────▼──────────┐
+                    │PostgreSQL│      │Retriever │      │  LLM Generator │
+                    │   (DB)   │      │(RAG)     │      │ (OpenAI/local) │
+                    └──────────┘      └──────────┘      └────────────────┘
 ```
 
 ### Data Flow
@@ -27,8 +27,8 @@ A production-ready fullstack AI chatbot built with **FastAPI**, **React**, **Pos
 1. User types message in React frontend
 2. Frontend sends POST /api/chat with JWT token
 3. Backend validates JWT, saves user message to PostgreSQL
-4. Backend sends conversation context to OpenAI API
-5. OpenAI returns AI response
+4. Backend retrieves relevant legal context from knowledge sources
+5. Backend sends question + retrieved context to the generator model
 6. Backend saves assistant message to PostgreSQL
 7. Backend returns response to frontend
 8. Frontend renders response with markdown formatting
@@ -40,7 +40,7 @@ A production-ready fullstack AI chatbot built with **FastAPI**, **React**, **Pos
 Frontend                          Backend                         External
 ┌──────────────────┐              ┌──────────────────────┐       ┌──────────┐
 │  LoginPage       │              │  auth router         │       │          │
-│  RegisterPage    │  ──────────► │  chat router         │ ────► │  OpenAI  │
+│  RegisterPage    │  ──────────► │  chat router         │ ────► │   RAG    │
 │  ChatPage        │  ◄────────── │  conversation router │ ◄──── │  API     │
 │    ├ Sidebar     │              ├──────────────────────┤       │          │
 │    ├ ChatWindow  │              │  auth.py (JWT)       │       └──────────┘
@@ -156,7 +156,7 @@ legal_chatbot_api/
 - Node.js 18+
 - PostgreSQL 14+
 - Redis (optional)
-- OpenAI API key
+- LLM API key (if using a hosted model)
 
 ---
 
@@ -166,9 +166,9 @@ legal_chatbot_api/
 # 1. Clone and navigate to the project
 cd legal_chatbot_api
 
-# 2. Create .env from template and set your OpenAI API key
+# 2. Create .env from template and set your model API key
 cp .env.example .env
-# Edit .env and set OPENAI_API_KEY=sk-your-key-here
+# Edit .env and set OPENAI_API_KEY=sk-your-key-here (or equivalent)
 
 # 3. Start all services
 docker compose up -d
@@ -280,8 +280,8 @@ curl -X POST http://localhost:8080/api/chat \
 | `JWT_SECRET_KEY`             | (change me)                       | Secret key for JWT signing     |
 | `JWT_ALGORITHM`              | `HS256`                           | JWT signing algorithm          |
 | `ACCESS_TOKEN_EXPIRE_MINUTES`| `1440`                            | Token TTL (24 hours)           |
-| `OPENAI_API_KEY`             | (required)                        | Your OpenAI API key            |
-| `OPENAI_MODEL`               | `gpt-3.5-turbo`                   | OpenAI model to use            |
+| `OPENAI_API_KEY`             | (required)                        | API key for generator model    |
+| `OPENAI_MODEL`               | `gpt-3.5-turbo`                   | Generator model identifier     |
 | `OPENAI_MAX_TOKENS`          | `2048`                            | Max response tokens            |
 | `OPENAI_TEMPERATURE`         | `0.7`                             | Response creativity (0-1)      |
 | `REDIS_URL`                  | `redis://localhost:6379/0`        | Redis connection string        |
@@ -295,7 +295,7 @@ curl -X POST http://localhost:8080/api/chat \
 - [ ] **Streaming responses** — real-time token-by-token display (endpoint ready at `/api/chat/stream`)
 - [ ] **Redis caching** — cache frequent queries and conversation summaries
 - [ ] **File uploads** — support document analysis (PDF, DOCX)
-- [ ] **Multiple AI models** — allow users to choose GPT-4, Claude, etc.
+- [ ] **Multiple generation models** — allow users to choose GPT, Claude, local LLMs, etc.
 - [ ] **Admin dashboard** — usage analytics, user management
 - [ ] **WebSocket support** — real-time bidirectional communication
 - [ ] **Search conversations** — full-text search across message history
