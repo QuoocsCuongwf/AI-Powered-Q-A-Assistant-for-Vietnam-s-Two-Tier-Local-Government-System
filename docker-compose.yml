@@ -49,10 +49,10 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-to-a-very-long-random-secret-string-at-least-32-chars}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-your-openai-key-here}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-3.5-turbo}
-      OPENAI_MAX_TOKENS: ${OPENAI_MAX_TOKENS:-2048}
-      OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE:-0.7}
+      RAG_BACKEND: ${RAG_BACKEND:-huggingface}
+      RAG_MODEL: ${RAG_MODEL:-auto}
+      RAG_MAX_TOKENS: ${RAG_MAX_TOKENS:-1024}
+      RAG_TEMPERATURE: ${RAG_TEMPERATURE:-0.1}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-30}
       APP_ENV: ${APP_ENV:-production}

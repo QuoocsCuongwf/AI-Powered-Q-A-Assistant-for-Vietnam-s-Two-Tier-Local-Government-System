@@ -8,21 +8,21 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # ── Database ──────────────────────────────────────────────
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/legal_chatbot"
+    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5433/legal_chatbot"
 
     # ── JWT ───────────────────────────────────────────────────
     JWT_SECRET_KEY: str = "change-me-to-a-very-long-random-secret-string"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
-    # ── OpenAI ────────────────────────────────────────────────
-    OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-3.5-turbo"
-    OPENAI_MAX_TOKENS: int = 2048
-    OPENAI_TEMPERATURE: float = 0.7
+    # ── RAG Pipeline ──────────────────────────────────────────
+    RAG_BACKEND: str = "huggingface"
+    RAG_MODEL: str = "auto"
+    RAG_MAX_TOKENS: int = 1024
+    RAG_TEMPERATURE: float = 0.1
 
     # ── Redis ─────────────────────────────────────────────────
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = "redis://localhost:6380/0"
 
     # ── Application ───────────────────────────────────────────
     APP_ENV: str = "development"
@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 @lru_cache()
