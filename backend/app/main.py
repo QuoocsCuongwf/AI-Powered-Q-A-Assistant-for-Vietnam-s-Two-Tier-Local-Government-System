@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
         init_rag_pipeline(
             backend=settings.RAG_BACKEND,
             model=settings.RAG_MODEL,
+            api_key=settings.GEMINI_API_KEY,
             max_tokens=settings.RAG_MAX_TOKENS,
             temperature=settings.RAG_TEMPERATURE
         )

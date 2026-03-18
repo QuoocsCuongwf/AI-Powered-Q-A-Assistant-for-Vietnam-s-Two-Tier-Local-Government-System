@@ -69,9 +69,10 @@ def init_rag_pipeline(
     from generation.run_generation import GEN_EVAL_DIR
 
     # ── 1. Build RetrievalReranker ──
-    # Duy trì reranker trên CPU để tiết kiệm VRAM cho LLM (RTX 3050 Ti 4GB)
-    logger.info("📦 Loading RetrievalReranker (bi-encoder + cross-encoder + FAISS) on CPU...")
-    _reranker = RetrievalReranker(device="cpu")
+    # Moving it to GPU for much faster response times. 
+    # Current VRAM requirement: ~1.2GB for Bi-encoder + Cross-encoder.
+    logger.info("📦 Loading RetrievalReranker (bi-encoder + cross-encoder + FAISS) on GPU (CUDA)...")
+    _reranker = RetrievalReranker(device="cuda")
 
     # ── 2. Build LLM Client ──
     backend_map = {
@@ -99,7 +100,7 @@ def init_rag_pipeline(
             model_name = "qwen/qwen3-30b-a3b:free"
     elif backend == "gemini":
         if not model_name or model_name == "auto":
-            model_name = "gemini-2.0-flash"
+            model_name = "gemini-2.5-flash"
     elif backend == "openai":
         if not model_name or model_name == "auto":
             model_name = "gpt-4o-mini"
@@ -115,6 +116,31 @@ def init_rag_pipeline(
         }
         api_key = os.environ.get(env_map.get(backend, ""), "")
 
+    # ── 2a. Build local fallback client (Qwen3 on GPU) ──
+    # Khi Gemini/API hết quota → tự động fallback sang model local
+    fallback_client = None
+    if llm_backend in (LLMBackend.GEMINI, LLMBackend.OPENAI, LLMBackend.OPENROUTER, LLMBackend.QWEN):
+        logger.info("🔧 Building local Qwen3 fallback client (GPU)...")
+        try:
+            # Chọn model Qwen3 phù hợp với VRAM còn lại
+            # Reserved 1.5GB cho bi-encoder + cross-encoder + overhead
+            local_model = select_local_model_for_vram(reserved_vram_gb=1.5)
+            local_config = LLMConfig(
+                backend=LLMBackend.HUGGINGFACE,
+                mode=LLMMode.DEV,
+                model_name=local_model,
+                model_path=local_model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=0.9,
+                context_length=4096,
+            )
+            fallback_client = LLMClient(local_config)
+            logger.info(f"✅ Local fallback ready: {local_model}")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not load local fallback: {e}")
+            logger.warning("   Pipeline sẽ chỉ dùng API, không có fallback.")
+
     llm_config = LLMConfig(
         backend=llm_backend,
         mode=LLMMode.DEV,
@@ -127,7 +153,7 @@ def init_rag_pipeline(
         api_key=api_key or None,
     )
 
-    client = LLMClient(llm_config)
+    client = LLMClient(llm_config, fallback_client=fallback_client)
 
     # ── 3. Build Pipeline ──
     GEN_EVAL_DIR.mkdir(parents=True, exist_ok=True)
@@ -148,7 +174,7 @@ def init_rag_pipeline(
     _initialized = True
     elapsed = time.time() - t0
     logger.info(f"✅ RAG pipeline initialized in {elapsed:.1f}s")
-    logger.info(f"   Backend: {backend} | Model: {model_name}")
+    logger.info(f"   Backend: {backend} | Model: {model_name} | Fallback: {'local Qwen3 (GPU)' if fallback_client else 'none'}")
 
 
 def generate_response(user_message: str, conversation_history=None) -> str:
@@ -212,6 +238,12 @@ def generate_response(user_message: str, conversation_history=None) -> str:
         query_id="webapi",
         verbose=False,
     )
+
+    # Debug: log raw response and parsed output
+    logger.debug(f"   [RAW] raw_response: {(output.raw_response or '')[:500]}")
+    logger.debug(f"   [PARSED] answer: {(output.answer or 'NONE')[:200]}")
+    logger.debug(f"   [PARSED] abstain: {output.abstain}, citations: {len(output.citations)}")
+    logger.debug(f"   [PARSED] decision: {output.decision}")
 
     elapsed_ms = (time.time() - t_start) * 1000
 

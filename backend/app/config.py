@@ -16,10 +16,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
     # ── RAG Pipeline ──────────────────────────────────────────
-    RAG_BACKEND: str = "huggingface"
-    RAG_MODEL: str = "auto"
-    RAG_MAX_TOKENS: int = 1024
+    RAG_BACKEND: str = "gemini"
+    RAG_MODEL: str = "gemini-2.5-flash"
+    RAG_MAX_TOKENS: int = 2048
     RAG_TEMPERATURE: float = 0.1
+    GEMINI_API_KEY: str = ""
 
     # ── Redis ─────────────────────────────────────────────────
     REDIS_URL: str = "redis://localhost:6380/0"
